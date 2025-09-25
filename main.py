@@ -252,16 +252,6 @@ class MyAI(Alg3D):
         black_board, white_board = self._convert_to_bitboard(board)
         return self._get_valid_moves_bb(black_board, white_board)
     
-    def check_win_any(self, board: List[List[List[int]]], player: int) -> bool:
-        """盤面全体で指定プレイヤーが勝利しているかチェック"""
-        for z in range(4):
-            for y in range(4):
-                for x in range(4):
-                    if board[z][y][x] == player:
-                        if self.check_win_from_position(board, x, y, z, player):
-                            return True
-        return False
-
     def alpha_beta(self, board: List[List[List[int]]], depth: int, alpha: float, beta: float, 
                    maximizing_player: bool, current_player: int) -> Tuple[float, Optional[Tuple[int, int]]]:
         """互換性のための関数"""
