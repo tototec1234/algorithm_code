@@ -1,259 +1,175 @@
-from typing import List, Tuple, Optional
-# from local_driver import Alg3D, Board # ローカル検証用
+from typing import List, Tuple
+#from local_driver import Alg3D, Board # ローカル検証用
 from framework import Alg3D, Board # 本番用
 import math
 
-class MyAI(Alg3D):
+class MyAI():
     def __init__(self):
-        self.max_depth = 4  # 探索深度（元のまま）
-        self.player_num = None  # 自分のプレイヤー番号
-        # 勝利パターンを事前計算（ビットマスク）
-        self.win_patterns = self._generate_win_patterns()
-        
+        # all possible winning lines
+        self.lines = self.generate_lines()
+        # check if the game is over
+        self.over = False
+        self.player = 0
+        self.end_value = 0 # 1 if win -1 if lose 0 if
+    
     def get_move(
         self,
         board: List[List[List[int]]], # 盤面情報
         player: int, # 先手(黒):1 後手(白):2
         last_move: Tuple[int, int, int] # 直前に置かれた場所(x, y, z)
     ) -> Tuple[int, int]:
-        """
-        ビットボード実装の立体４目並べAI（Minimax + Alpha-Beta）
-        """
-        self.player_num = player
-        
-        # ビットボードに変換
-        black_board, white_board = self._convert_to_bitboard(board)
-        
-        # 有効な手を取得
-        valid_moves = self._get_valid_moves_bb(black_board, white_board)
-        if not valid_moves:
-            return (0, 0)  # フォールバック
-        
-        # Minimax + Alpha-Beta探索で最適手を決定（元のアルゴリズム）
-        _, best_move = self._alpha_beta_bb(black_board, white_board, self.max_depth, 
-                                         -math.inf, math.inf, True, player)
-        
-        if best_move is None:
-            return valid_moves[0]  # フォールバック
-        
+        # ここにアルゴリズムを書く
+        self.player = player
+        # HERE OPTIMISE
+        best_score = 0
+        best_move = (0, 0)
+        print("Legal moves :", self.legal_move(board))
+        for action in self.legal_move(board):
+            print("Action :", action)
+            # if winning move, play it
+            new_board = self.result(board, action)
+            if self.is_terminal(new_board) and self.end_value == 1:
+                return (action[1], action[2])
+            current = self.alpha_beta_minimax(board, False, 0, 3, alpha=-math.inf, beta=math.inf)
+            if current > best_score:
+                best_score = current
+                best_move = (action[1], action[2])
         return best_move
-    
-    def _convert_to_bitboard(self, board: List[List[List[int]]]) -> Tuple[int, int]:
-        """3次元リストをビットボードに変換"""
-        black_board = 0
-        white_board = 0
-        
-        for z in range(4):
-            for y in range(4):
-                for x in range(4):
-                    bit_pos = z * 16 + y * 4 + x
-                    if board[z][y][x] == 1:  # 黒
-                        black_board |= (1 << bit_pos)
-                    elif board[z][y][x] == 2:  # 白
-                        white_board |= (1 << bit_pos)
-        
-        return black_board, white_board
-    
-    def _get_valid_moves_bb(self, black_board: int, white_board: int) -> List[Tuple[int, int]]:
-        """ビットボードから有効な手を取得"""
-        valid_moves = []
-        occupied = black_board | white_board
-        
-        for x in range(4):
-            for y in range(4):
-                # 一番上の層（z=3）が空かチェック
-                top_bit_pos = 3 * 16 + y * 4 + x
-                if not (occupied & (1 << top_bit_pos)):
-                    valid_moves.append((x, y))
-        
-        return valid_moves
-    
-    def _alpha_beta_bb(self, black_board: int, white_board: int, depth: int, 
-                      alpha: float, beta: float, maximizing_player: bool, 
-                      current_player: int) -> Tuple[float, Optional[Tuple[int, int]]]:
+
+    def result(self, board, action):
         """
-        ビットボード版Alpha-Betaプルーニング付きのMinimax探索
+            return the board that result from a move
+            board: current board
+            move: (x,y,z) where to play
+            player: which player is playing
+            return new board
+        """ 
+        board[action[0]][action[1]][action[2]] = self.player
+        return board
+
+    def generate_lines(self):
+        lines = []
+        rng = range(4)
+        for z in rng:
+            for y in rng:
+                lines.append([(x,y,z) for x in rng])
+        for z in rng:
+            for x in rng:
+                lines.append([(x,y,z) for y in rng])
+        for y in rng:
+            for x in rng:
+                lines.append([(x,y,z) for z in rng])
+
+        for z in rng:
+            lines.append([(i,i,z) for i in rng])
+            lines.append([(i,3-i,z) for i in rng])
+        for y in rng:
+            lines.append([(i,y,i) for i in rng])
+            lines.append([(i,y,3-i) for i in rng])
+        for x in rng:
+            lines.append([(x,i,i) for i in rng])
+            lines.append([(x,i,3-i) for i in rng])
+
+        # diagonal
+        lines.append([(i,i,i) for i in rng])
+        lines.append([(i,i,3-i) for i in rng])
+        lines.append([(i,3-i,i) for i in rng])
+        lines.append([(3-i,i,i) for i in rng])
+        return lines
+
+    def is_terminal(self, board):
         """
-        # 終了条件をチェック
-        if depth == 0 or self._is_terminal_bb(black_board, white_board):
-            return self._evaluate_board_bb(black_board, white_board), None
-        
-        valid_moves = self._get_valid_moves_bb(black_board, white_board)
-        if not valid_moves:
-            return self._evaluate_board_bb(black_board, white_board), None
-        
-        best_move = None
-        
-        if maximizing_player:
-            max_eval = -math.inf
-            for move in valid_moves:
-                x, y = move
-                new_black, new_white, z = self._make_move_bb(black_board, white_board, x, y, current_player)
-                if z == -1:
-                    continue
-                
-                eval_score, _ = self._alpha_beta_bb(new_black, new_white, depth - 1, alpha, beta, False, 
-                                                  2 if current_player == 1 else 1)
-                
-                if eval_score > max_eval:
-                    max_eval = eval_score
-                    best_move = move
-                
-                alpha = max(alpha, eval_score)
-                if beta <= alpha:
-                    break  # Alpha-Betaプルーニング
-            
-            return max_eval, best_move
-        else:
-            min_eval = math.inf
-            for move in valid_moves:
-                x, y = move
-                new_black, new_white, z = self._make_move_bb(black_board, white_board, x, y, current_player)
-                if z == -1:
-                    continue
-                
-                eval_score, _ = self._alpha_beta_bb(new_black, new_white, depth - 1, alpha, beta, True, 
-                                                  2 if current_player == 1 else 1)
-                
-                if eval_score < min_eval:
-                    min_eval = eval_score
-                    best_move = move
-                
-                beta = min(beta, eval_score)
-                if beta <= alpha:
-                    break  # Alpha-Betaプルーニング
-            
-            return min_eval, best_move
-    
-    def _make_move_bb(self, black_board: int, white_board: int, x: int, y: int, 
-                     player: int) -> Tuple[int, int, int]:
-        """ビットボードに手を打ち、新しいボードとz座標を返す"""
-        occupied = black_board | white_board
-        
-        # 下から順に空いている位置を探す
-        for z in range(4):
-            bit_pos = z * 16 + y * 4 + x
-            if not (occupied & (1 << bit_pos)):
-                if player == 1:  # 黒
-                    return black_board | (1 << bit_pos), white_board, z
-                else:  # 白
-                    return black_board, white_board | (1 << bit_pos), z
-        
-        return black_board, white_board, -1  # 置けない場合
-    
-    def _is_terminal_bb(self, black_board: int, white_board: int) -> bool:
-        """ビットボード版ゲーム終了判定"""
-        # 勝者がいるかチェック
-        if self._check_win_bb(black_board) or self._check_win_bb(white_board):
-            return True
-        
-        # 盤面が満杯かチェック
-        return len(self._get_valid_moves_bb(black_board, white_board)) == 0
-    
-    def _check_win_bb(self, board: int) -> bool:
-        """ビットボード版勝利判定"""
-        # 事前計算した勝利パターンをチェック
-        for pattern in self.win_patterns:
-            if (board & pattern) == pattern:
-                return True
+            check if the game ended
+            return 1 if ai win -1 if lose and 0 equal
+        """
+        enemy = 1 if self.player == 2 else 2
+        for line in self.lines:
+            if all(board[z][y][x] == self.player for (x,y,z) in line):
+                self.over = True
+                self.end_value = 1
+                break
+            elif all(board[z][y][x] == enemy for (x,y,z) in line):
+                self.over = True
+                self.end_value = -1
+                break
+        # if board is full
+        if all(board[3][y][x] != 0 for x in range(4) for y in range(4)):
+            self.over = True
+            self.end_value = 0
         return False
-    
-    def _generate_win_patterns(self) -> List[int]:
-        """4つ並びの勝利パターンを事前計算"""
-        patterns = []
-        
-        # すべての方向での4つ並びパターンを生成
-        directions = [
-            (1, 0, 0),   # X軸方向
-            (0, 1, 0),   # Y軸方向  
-            (0, 0, 1),   # Z軸方向
-            (1, 1, 0),   # XY平面の斜め
-            (1, -1, 0),
-            (1, 0, 1),   # XZ平面の斜め
-            (1, 0, -1),
-            (0, 1, 1),   # YZ平面の斜め
-            (0, 1, -1),
-            (1, 1, 1),   # 3D対角線
-            (1, 1, -1),
-            (1, -1, 1),
-            (-1, 1, 1)
-        ]
-        
-        for z in range(4):
-            for y in range(4):
-                for x in range(4):
-                    for dx, dy, dz in directions:
-                        pattern = 0
-                        valid = True
-                        
-                        # 4つ並びのパターンを作成
-                        for i in range(4):
-                            nx, ny, nz = x + i * dx, y + i * dy, z + i * dz
-                            if 0 <= nx < 4 and 0 <= ny < 4 and 0 <= nz < 4:
-                                bit_pos = nz * 16 + ny * 4 + nx
-                                pattern |= (1 << bit_pos)
-                            else:
-                                valid = False
-                                break
-                        
-                        if valid and pattern not in patterns:
-                            patterns.append(pattern)
-        
-        return patterns
-    
-    def _evaluate_board_bb(self, black_board: int, white_board: int) -> float:
-        """ビットボード版盤面評価関数"""
-        if self.player_num is None:
-            return 0.0
-        
-        player_board = black_board if self.player_num == 1 else white_board
-        opponent_board = white_board if self.player_num == 1 else black_board
-        
-        # 勝利状態の特別評価
-        if self._check_win_bb(player_board):
-            return 1000.0
-        if self._check_win_bb(opponent_board):
-            return -1000.0
-        
-        # 連続性の評価
-        player_score = self._evaluate_threats_bb(player_board, opponent_board)
-        opponent_score = self._evaluate_threats_bb(opponent_board, player_board)
-        
-        return player_score - opponent_score
-    
-    def _evaluate_threats_bb(self, my_board: int, opp_board: int) -> float:
-        """ビットボード版脅威評価"""
-        score = 0.0
-        
-        # 勝利パターンから脅威を評価
-        for pattern in self.win_patterns:
-            my_bits = my_board & pattern
-            opp_bits = opp_board & pattern
-            
-            # 相手の石がある場合はスキップ
-            if opp_bits:
-                continue
-            
-            # 自分の石の数をカウント
-            count = bin(my_bits).count('1')
-            
-            if count == 3:
-                score += 50.0  # 3つ並び
-            elif count == 2:
-                score += 10.0  # 2つ並び
-            elif count == 1:
-                score += 1.0   # 1つ
-        
+
+
+    def evaluate(self, board):
+        """
+            END CONDITION
+            return 100 if ai win -100 if lose and 0 equal
+        """
+        enemy = 1 if self.player == 2 else 2
+        score = 0
+
+        if self.over:
+            return self.end_value * 100
+		# Heuristic scoring
+        for line in self.lines:
+			# Example line : [(0,0,0), (1,1,1), (2,2,2), (3,3,3)]
+			# Example values : [-1, 1, 0, 2]
+            values = [board[x][y][z] for (x,y,z) in line]
+			
+            if values.count(self.player) == 3 and values.count(0) == 1:
+                score += 10
+            elif values.count(self.player) == 2 and values.count(0) == 2:
+                score += 1
+
+            if values.count(enemy) == 3 and values.count(0) == 1:
+            	score -= 10
+            elif values.count(enemy) == 2 and values.count(0) == 2:
+            	score -= 1
+
         return score
 
-    # 元のアルゴリズムとの互換性を保つための関数群
-    def get_valid_moves(self, board: List[List[List[int]]]) -> List[Tuple[int, int]]:
-        """互換性のための関数"""
-        black_board, white_board = self._convert_to_bitboard(board)
-        return self._get_valid_moves_bb(black_board, white_board)
-    
-    def alpha_beta(self, board: List[List[List[int]]], depth: int, alpha: float, beta: float, 
-                   maximizing_player: bool, current_player: int) -> Tuple[float, Optional[Tuple[int, int]]]:
-        """互換性のための関数"""
-        black_board, white_board = self._convert_to_bitboard(board)
-        return self._alpha_beta_bb(black_board, white_board, depth, alpha, beta, maximizing_player, current_player)
+    def legal_move(self, board):
+        """
+            use to determine how many legal moves are possible
+        """
+        action_arr = []
+
+        for plane_i in range(4):
+            print("Plane i :", plane_i)
+            for row_i in range(4):
+                print("Row i :", row_i)
+                for space_i in range(4):
+                    if board[plane_i][row_i][space_i] == 0 \
+                        and (3 == plane_i \
+                        or board[plane_i + 1][row_i][space_i] == 0 ):
+
+                        action_arr.append((plane_i, row_i, space_i))
+        return action_arr
+
+    def alpha_beta_minimax(self, board, isMaximiser, depth, max_depth, alpha, beta):
+        """
+            isMaximiser: is the computer turn to check in the three
+            depth: how far in the three you are
+            max_deth: maximmum depth
+        """
+        if depth == 0 or self.is_terminal(board) or depth == max_depth:
+            return self.evaluate(board)
+
+        if isMaximiser:
+            max_eval = -math.inf
+            for action in self.legal_move(board):
+                eval = self.alpha_beta_minimax(self.result(board, action), False, depth - 1, max_depth, alpha, beta)
+                max_eval = max(max_eval, eval)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break
+            return max_eval
+        else:
+            min_eval = math.inf
+            for action in self.legal_move(board):
+                eval = self.alpha_beta_minimax(self.result(board, action), True, depth - 1, max_depth, alpha, beta)
+                min_eval = min(max_eval, eval)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break
+            return min_eval
+
