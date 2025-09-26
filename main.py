@@ -52,22 +52,21 @@ class MyAI(Alg3D):
         best_score = -math.inf
         best_move = (0, 0)
         # print("Legal moves :", self.legal_move(board))
-        # for action in self.legal_move(board):
-        #     self.over = False
-        #     self.end_value = 0
-        #     # print("Action :", action)
-        #     # if winning move, play it
-        #     new_board = self.result(board, action)
-        #     # if self.is_terminal(new_board) and self.end_value == 1:
-        #     #     return (action[1], action[2])
-        #     current = self.alpha_beta_minimax(new_board, False, 0, 8, alpha=-math.inf, beta=math.inf)
-        #     # print("Action :", action, "Score :", current, "\n\n")
-        #     if current > best_score:
-        #         best_score = current
-        #         best_move = (action[1], action[2])
-        # # print("Best move :", best_move)
-        # return best_move
-        return (0,0)
+        for action in self.legal_move(board):
+            self.over = False
+            self.end_value = 0
+            # print("Action :", action)
+            # if winning move, play it
+            new_board = self.result(board, action)
+            # if self.is_terminal(new_board) and self.end_value == 1:
+            #     return (action[1], action[2])
+            current = self.alpha_beta_minimax(new_board, False, 0, 8, alpha=-math.inf, beta=math.inf)
+            # print("Action :", action, "Score :", current, "\n\n")
+            if current > best_score:
+                best_score = current
+                best_move = (action[1], action[2])
+        # print("Best move :", best_move)
+        return best_move
 
     def result(self, board, action, isMaximiser=True):
         """
