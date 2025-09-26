@@ -290,6 +290,10 @@ class MyAI():
     
     def _evaluate_bb(self, black_board: int, white_board: int) -> int:
         """ビットボード版盤面評価"""
+        # プレイヤーが設定されていない場合は0を返す
+        if self.player == 0:
+            return 0
+            
         if self.over:
             return self.end_value * 100
         

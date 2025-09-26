@@ -99,6 +99,11 @@ class MyAI():
             return True if game is over, False otherwise
             Updates self.end_value: 1 if ai win, -1 if lose, 0 if draw
         """
+        # プレイヤーが設定されていない場合はゲーム継続とみなす
+        if self.player == 0:
+            self.over = False
+            return False
+            
         enemy = 1 if self.player == 2 else 2
         
         # 勝利判定
@@ -128,6 +133,10 @@ class MyAI():
             END CONDITION
             return 100 if ai win -100 if lose and 0 equal
         """
+        # プレイヤーが設定されていない場合は0を返す
+        if self.player == 0:
+            return 0
+            
         enemy = 1 if self.player == 2 else 2
         score = 0
 
