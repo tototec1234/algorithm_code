@@ -1,3 +1,28 @@
+# ファイル拡張子	.py
+# 必須関数	"必須関数 get_move(
+#     board: list[list[list[int]]],
+#     player: int,
+#     last_move: tuple[int, int, int]
+# ) -> tuple[int, int]
+# "
+# 戻り値	(x, y) のタプル（0〜3 の範囲）
+# 利用可能ライブラリ	Python標準ライブラリのみ（）
+# 禁止ライブラリ	os, sys, subprocess, socket, requests, urllib, http, asyncio, threading, multiprocessing, など
+# 禁止関数	open, eval, exec, compile, __import__, system, popen
+# Pythonバージョン	サーバは Python 3.9 互換 で実行（match文など3.10以降専用構文は不可）
+# 実行制限	メモリ最大 約1GB、CPU時間 約3秒、1手あたり待ち時間上限 30秒
+
+# https://docs.python.org/ja/3.9/library/index.html Python 3.9 標準ライブラリドキュメント(必見だべや！）
+
+# https://qiita.com/a_uchida/items/bec46c20fd2965c6e1a0 ゾブリストハッシュってな～に？
+# http://www.amy.hi-ho.ne.jp/okuhara/howtoj.htm 置換表って単純だけど便利だよね。
+# ゾブリストハッシュ: 盤面を数値に変換する計算方法
+# 置換表: ゾブリストハッシュのキーとして探索結果を保存するテーブル
+
+# bhttps://speakerdeck.com/antenna_three/bitutobodojie-shuo?slide=55 BitBoardって何なの奥様？
+# https://qiita.com/zawawahoge/items/8bbd4c2319e7f7746266 ビットカウント最高効率だヒャアッ！
+
+
 from typing import Optional, Dict
 # from local_driver import Alg3D, Board # ローカル検証用
 from framework import Alg3D, Board # 本番用
@@ -61,7 +86,7 @@ class MyAI(Alg3D):
         self.zobrist_table = self._initialize_zobrist_table()
         
         # 置換表の初期化（メモリ制限対応）
-        self.max_table_size = 5000000  # 最大500万エントリ（約100MB）
+        self.max_table_size = 5000000  # 最大100万エントリ（約100MB）
         self.transposition_table: Dict[int, TranspositionEntry] = {}
         
         # 統計情報（デバッグ用）
@@ -182,64 +207,8 @@ class MyAI(Alg3D):
         self.transposition_table[hash_key] = entry
 
     """
-    盤面全体の駒数をカウント
-    """
-    def _count_total_pieces(self, board: list[list[list[int]]]) -> int:
-        count = 0
-        for z in range(4):
-            for y in range(4):
-                for x in range(4):
-                    if board[z][y][x] != 0:
-                        count += 1
-        return count
-
-    """
-    戦略的開局処理（最初の2-3手）
-    角の戦略的配置による開局定石
-    """
-    def _get_opening_move(self, board: list[list[list[int]]], move_count: int, player: int) -> Optional[tuple[int, int]]:
-        # 4つの角の位置（Z=0の底面）
-        corners = [(0, 0), (0, 3), (3, 0), (3, 3)]
-        
-        # 各角が空いているかチェック
-        def is_corner_available(x: int, y: int) -> bool:
-            return board[0][y][x] == 0  # Z=0の底面が空いているか
-        
-        if move_count == 1:  # 後手の初手
-            if player == 2:  # 後手（白）
-                # 先手の駒から最も遠い角を選択
-                # 先手が(0,0)にいると仮定 → (3,3)が最適
-                if is_corner_available(3, 3):
-                    return (3, 3)
-                # 万が一(3,3)が使えない場合の代替案
-                for x, y in [(0, 3), (3, 0)]:
-                    if is_corner_available(x, y):
-                        return (x, y)
-        
-        elif move_count == 2:  # 先手の2手目
-            if player == 1:  # 先手（黒）
-                # 自分の初手(0,0)に近い角を選択
-                # (0,3)と(3,0)が候補、空いている方を選ぶ
-                if is_corner_available(0, 3):
-                    return (0, 3)
-                elif is_corner_available(3, 0):
-                    return (3, 0)
-        
-        elif move_count == 3:  # 後手の2手目  
-            if player == 2:  # 後手（白）
-                # 自分の初手(3,3)に近い角を選択
-                # (0,3)と(3,0)のうち空いている方
-                if is_corner_available(0, 3):
-                    return (0, 3)
-                elif is_corner_available(3, 0):
-                    return (3, 0)
-        
-        # 3手目以降、または開局戦略に該当しない場合はNoneを返して通常探索へ
-        return None
-
-    """
     メインのAI思考ルーチン
-    開局戦略 + 置換表+ゾブリストハッシュ対応の立体４目並べAI
+    置換表+ゾブリストハッシュ対応の立体４目並べAI
     """
     def get_move(
         self,
@@ -248,12 +217,6 @@ class MyAI(Alg3D):
         last_move: tuple[int, int, int] # 直前に置かれた場所(x, y, z)
     ) -> tuple[int, int]:
         self.player_num = player
-        
-        # ===== 開局戦略（最初の2-3手） =====
-        move_count = self._count_total_pieces(board)
-        opening_move = self._get_opening_move(board, move_count, player)
-        if opening_move:
-            return opening_move
         
         # 置換表の統計をリセット
         self.tt_hits = 0
@@ -551,3 +514,4 @@ class MyAI(Alg3D):
                    maximizing_player: bool, current_player: int) -> tuple[float, Optional[tuple[int, int]]]:
         black_board, white_board = self._convert_to_bitboard(board)
         return self._alpha_beta_with_tt(black_board, white_board, depth, alpha, beta, maximizing_player, current_player)
+		
