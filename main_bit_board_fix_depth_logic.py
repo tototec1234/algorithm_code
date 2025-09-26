@@ -40,13 +40,15 @@ class MyAI():
             z, y, x = action
             print("Action (BB):", action)
             
-            # 勝利手があるかチェック
+            # 手を適用した新しい盤面を作成
             new_black, new_white, _ = self._make_move_bb(black_board, white_board, x, y, player)
+            
+            # 勝利手があるかチェック
             if self._check_win_bb(new_black if player == 1 else new_white):
                 return (y, x)  # 勝利手を即座に選択
             
-            # ビットボード版Alpha-Beta探索
-            current = self._alpha_beta_minimax_bb(black_board, white_board, False, 0, 3, 
+            # 新しい盤面でビットボード版Alpha-Beta探索を実行
+            current = self._alpha_beta_minimax_bb(new_black, new_white, False, 0, 3, 
                                                 alpha=-math.inf, beta=math.inf)
             if current > best_score:
                 best_score = current
@@ -127,12 +129,12 @@ class MyAI():
 
         if self.over:
             return self.end_value * 100
-		# Heuristic scoring
+        # Heuristic scoring
         for line in self.lines:
-			# Example line : [(0,0,0), (1,1,1), (2,2,2), (3,3,3)]
-			# Example values : [-1, 1, 0, 2]
+            # Example line : [(0,0,0), (1,1,1), (2,2,2), (3,3,3)]
+            # Example values : [-1, 1, 0, 2]
             values = [board[x][y][z] for (x,y,z) in line]
-			
+            
             if values.count(self.player) == 3 and values.count(0) == 1:
                 score += 10
             elif values.count(self.player) == 2 and values.count(0) == 2:
