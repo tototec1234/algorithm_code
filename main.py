@@ -12,7 +12,7 @@ class MyAI():
         # check if the game is over
         self.over = False
         self.player = 0
-        self.end_value = 0 # 1 if win -1 if lose 0 if
+        self.end_value = 0 # 1 if win -1 if lose 0 if draw
     
     def get_move(
         self,
@@ -29,15 +29,20 @@ class MyAI():
         # 有効手を取得
         legal_moves = self._legal_move_bb(black_board, white_board)
         if not legal_moves:
+            # 最初の有効手を探す
+            for y in range(4):
+                for x in range(4):
+                    if board[0][y][x] == 0:  # 最下層に空きがある
+                        return (x, y)
             return (0, 0)  # フォールバック
         
         print("Legal moves (BB):", legal_moves)
         
         best_score = -math.inf
-        best_move = (0, 0)
+        best_move = legal_moves[0]  # 最初の有効手をデフォルトに
         
         for action in legal_moves:
-            z, y, x = action
+            x, y = action
             print("Action (BB):", action)
             
             # 手を適用した新しい盤面を作成
@@ -45,14 +50,14 @@ class MyAI():
             
             # 勝利手があるかチェック
             if self._check_win_bb(new_black if player == 1 else new_white):
-                return (y, x)  # 勝利手を即座に選択
+                return (x, y)  # 勝利手を即座に選択
             
             # 新しい盤面でビットボード版Alpha-Beta探索を実行
             current = self._alpha_beta_minimax_bb(new_black, new_white, False, 0, 3, 
                                                 alpha=-math.inf, beta=math.inf)
             if current > best_score:
                 best_score = current
-                best_move = (y, x)  # (row, col)形式で返す
+                best_move = (x, y)  # (x, y)形式で返す
         
         return best_move
 
@@ -249,19 +254,20 @@ class MyAI():
         
         return patterns
     
-    def _legal_move_bb(self, black_board: int, white_board: int) -> List[Tuple[int, int, int]]:
-        """ビットボード版有効手生成"""
+    def _legal_move_bb(self, black_board: int, white_board: int) -> List[Tuple[int, int]]:
+        """ビットボード版有効手生成 - (x, y)形式で返す"""
         action_arr = []
         occupied = black_board | white_board
         
         for y in range(4):  # row_i
             for x in range(4):  # space_i
+                # 下から上へ、最初に置ける位置を見つける
                 for z in range(4):  # plane_i (下から上へ)
                     bit_pos = self._coord_to_bit(x, y, z)
                     if not (occupied & (1 << bit_pos)):
                         # この位置が空で、かつ重力ルールを満たす
                         if z == 0 or (occupied & (1 << self._coord_to_bit(x, y, z-1))):
-                            action_arr.append((z, y, x))  # (plane_i, row_i, space_i)
+                            action_arr.append((x, y))  # (x, y)形式で返す
                             break  # この列でもっとも下の位置のみ
         
         return action_arr
@@ -293,9 +299,6 @@ class MyAI():
         # プレイヤーが設定されていない場合は0を返す
         if self.player == 0:
             return 0
-            
-        if self.over:
-            return self.end_value * 100
         
         player_board = black_board if self.player == 1 else white_board
         enemy_board = white_board if self.player == 1 else black_board
@@ -305,6 +308,10 @@ class MyAI():
             return 100
         if self._check_win_bb(enemy_board):
             return -100
+        
+        # 盤面が満杯かチェック
+        if self._is_terminal_bb(black_board, white_board):
+            return 0  # 引き分け
         
         score = 0
         
@@ -353,7 +360,7 @@ class MyAI():
         if isMaximiser:
             max_eval = -math.inf
             for action in self._legal_move_bb(black_board, white_board):
-                z, y, x = action
+                x, y = action
                 new_black, new_white, _ = self._make_move_bb(black_board, white_board, x, y, self.player)
                 eval_score = self._alpha_beta_minimax_bb(new_black, new_white, False, depth + 1, max_depth, alpha, beta)
                 max_eval = max(max_eval, eval_score)
@@ -365,7 +372,7 @@ class MyAI():
             min_eval = math.inf
             enemy = 1 if self.player == 2 else 2
             for action in self._legal_move_bb(black_board, white_board):
-                z, y, x = action
+                x, y = action
                 new_black, new_white, _ = self._make_move_bb(black_board, white_board, x, y, enemy)
                 eval_score = self._alpha_beta_minimax_bb(new_black, new_white, True, depth + 1, max_depth, alpha, beta)
                 min_eval = min(min_eval, eval_score)
