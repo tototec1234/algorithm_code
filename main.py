@@ -86,7 +86,7 @@ class MyAI(Alg3D):
         self.zobrist_table = self._initialize_zobrist_table()
         
         # 置換表の初期化（メモリ制限対応）
-        self.max_table_size = 1000000  # 最大100万エントリ（約100MB）
+        self.max_table_size = 5000000  # 最大100万エントリ（約100MB）
         self.transposition_table: Dict[int, TranspositionEntry] = {}
         
         # 統計情報（デバッグ用）
