@@ -1,43 +1,16 @@
 from typing import List, Tuple
-# from local_driver import Alg3D, Board # ローカル検証用
+#from local_driver import Alg3D, Board # ローカル検証用
 from framework import Alg3D, Board # 本番用
 import math
 
-class MyAI(Alg3D):
+class MyAI():
     def __init__(self):
         # all possible winning lines
         self.lines = self.generate_lines()
         # check if the game is over
         self.over = False
-        self.player = 1
+        self.player = 0
         self.end_value = 0 # 1 if win -1 if lose 0 if
-        self.position_weights = [
-            [  # z = 0
-                [3, 4, 4, 3],
-                [4, 6, 6, 4],
-                [4, 6, 6, 4],
-                [3, 4, 4, 3]
-            ],
-            [  # z = 1
-                [4, 6, 6, 4],
-                [6, 8, 8, 6],
-                [6, 8, 8, 6],
-                [4, 6, 6, 4]
-            ],
-            [  # z = 2
-                [4, 6, 6, 4],
-                [6, 8, 8, 6],
-                [6, 8, 8, 6],
-                [4, 6, 6, 4]
-            ],
-            [  # z = 3
-                [3, 4, 4, 3],
-                [4, 6, 6, 4],
-                [4, 6, 6, 4],
-                [3, 4, 4, 3]
-            ]
-        ]
-
     
     def get_move(
         self,
@@ -47,29 +20,43 @@ class MyAI(Alg3D):
     ) -> Tuple[int, int]:
         # ここにアルゴリズムを書く
         self.player = player
-        # print("Board state at start of get_move: ", board)
+        legal_moves = self.legal_move(board)
+        
+        # デバッグ: 座標系の確認
+        # print(f"Player {player}, Legal moves: {legal_moves[:3]}")  # 最初の3つだけ表示
+        
+        # 有効な手がない場合のエラーハンドリング
+        if not legal_moves:
+            # 緊急時：重力ルールに従って最初の有効な場所を探す
+            for x in range(4):
+                for y in range(4):
+                    for z in range(4):
+                        if board[x][y][z] == 0 and (x == 0 or board[x-1][y][z] > 0):
+                            return (y, z)
+            # 最終手段：最下層の空いている場所
+            for y in range(4):
+                for z in range(4):
+                    if board[0][y][z] == 0:
+                        return (y, z)
+            return (0, 0)  # 最終手段
+        
         # HERE OPTIMISE
         best_score = -math.inf
-        best_move = (0, 0)
-        # print("Legal moves :", self.legal_move(board))
-        # for action in self.legal_move(board):
-        #     self.over = False
-        #     self.end_value = 0
-        #     # print("Action :", action)
-        #     # if winning move, play it
-        #     new_board = self.result(board, action)
-        #     # if self.is_terminal(new_board) and self.end_value == 1:
-        #     #     return (action[1], action[2])
-        #     current = self.alpha_beta_minimax(new_board, False, 0, 8, alpha=-math.inf, beta=math.inf)
-        #     # print("Action :", action, "Score :", current, "\n\n")
-        #     if current > best_score:
-        #         best_score = current
-        #         best_move = (action[1], action[2])
-        # # print("Best move :", best_move)
-        # return best_move
-        return (0,0)
+        best_move = (legal_moves[0][1], legal_moves[0][2])  # 最初の有効手で初期化
+        
+        for action in legal_moves:
+            # if winning move, play it
+            new_board = self.result(board, action)
+            if self.is_terminal(new_board) and self.end_value == 1:
+                return (action[1], action[2])
+            current = self.alpha_beta_minimax(new_board, False, 0, 3, alpha=-math.inf, beta=math.inf)
+            if current > best_score:
+                best_score = current
+                best_move = (action[1], action[2])
+        
+        return best_move
 
-    def result(self, board, action, isMaximiser=True):
+    def result(self, board, action):
         """
             return the board that result from a move
             board: current board
@@ -79,7 +66,7 @@ class MyAI(Alg3D):
         """ 
         # Create a deep copy of the board
         new_board = [[[board[x][y][z] for z in range(4)] for y in range(4)] for x in range(4)]
-        new_board[action[0]][action[1]][action[2]] = self.player if isMaximiser else (1 if self.player == 2 else 2)
+        new_board[action[0]][action[1]][action[2]] = self.player
         return new_board
 
     def generate_lines(self):
@@ -119,24 +106,18 @@ class MyAI(Alg3D):
         """
         enemy = 1 if self.player == 2 else 2
         for line in self.lines:
-
-
             if all(board[x][y][z] == self.player for (x,y,z) in line):
                 self.over = True
                 self.end_value = 1
-                # print("You WIN")
-
                 return True
             elif all(board[x][y][z] == enemy for (x,y,z) in line):
                 self.over = True
                 self.end_value = -1
-                # print("You lose")
                 return True
         # if board is full
-        if all(board[3][y][x] != 0 for x in range(4) for y in range(4)):
+        if all(board[x][y][3] != 0 for x in range(4) for y in range(4)):
             self.over = True
             self.end_value = 0
-            # print("Draw")
         return self.over
 
 
@@ -166,15 +147,6 @@ class MyAI(Alg3D):
             elif values.count(enemy) == 2 and values.count(0) == 2:
                 score -= 10
 
-        # Position Weight
-        for x in range(4):
-            for y in range(4):
-                for z in range(4):
-                    if board[x][y][z] == self.player:
-                        score += self.position_weights[z][x][y]
-                    elif board[x][y][z] == enemy:
-                        score -= self.position_weights[z][x][y]
-
         return score
 
     def legal_move(self, board):
@@ -184,9 +156,9 @@ class MyAI(Alg3D):
         action_arr = []
 
         for plane_i in range(4):
-            # print("Plane i :", plane_i)
+            # print("Plane i :", plane_i)  # フレームワークの出力を汚染するためコメントアウト
             for row_i in range(4):
-                # print("Row i :", row_i)
+                # print("Row i :", row_i)  # フレームワークの出力を汚染するためコメントアウト
                 for space_i in range(4):
                     if board[plane_i][row_i][space_i] == 0 \
                         and (plane_i == 0 \
@@ -204,10 +176,16 @@ class MyAI(Alg3D):
         if self.is_terminal(board) or depth == max_depth:
             return self.evaluate(board)
 
+        legal_moves = self.legal_move(board)
+        
+        # 有効な手がない場合（ゲーム終了と見なす）
+        if not legal_moves:
+            return self.evaluate(board)
+
         if isMaximiser:
             max_eval = -math.inf
-            for action in self.legal_move(board):
-                new_board = self.result(board, action, isMaximiser=True)
+            for action in legal_moves:
+                new_board = self.result(board, action)
                 eval = self.alpha_beta_minimax(new_board, False, depth + 1, max_depth, alpha, beta)
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, eval)
@@ -216,13 +194,12 @@ class MyAI(Alg3D):
             return max_eval
         else:
             min_eval = math.inf
-            for action in self.legal_move(board):
-                new_board = self.result(board, action, isMaximiser=False)
+            for action in legal_moves:
+                new_board = self.result(board, action)
                 eval = self.alpha_beta_minimax(new_board, True, depth + 1, max_depth, alpha, beta)
                 min_eval = min(min_eval, eval)
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
             return min_eval
-
 
