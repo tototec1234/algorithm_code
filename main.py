@@ -23,9 +23,9 @@ class MyAI():
         # HERE OPTIMISE
         best_score = 0
         best_move = (0, 0)
-        print("Legal moves :", self.legal_move(board))
+        # print("Legal moves :", self.legal_move(board))
         for action in self.legal_move(board):
-            print("Action :", action)
+            # print("Action :", action)
             # if winning move, play it
             new_board = self.result(board, action)
             if self.is_terminal(new_board) and self.end_value == 1:
@@ -34,6 +34,7 @@ class MyAI():
             if current > best_score:
                 best_score = current
                 best_move = (action[1], action[2])
+        # print("Best move :", best_move)
         return best_move
 
     def result(self, board, action):
@@ -110,7 +111,7 @@ class MyAI():
         score = 0
 
         if self.over:
-            return self.end_value * 100
+            return self.end_value * 1000
         # Heuristic scoring
         for line in self.lines:
 			# Example line : [(0,0,0), (1,1,1), (2,2,2), (3,3,3)]
@@ -118,14 +119,14 @@ class MyAI():
             values = [board[x][y][z] for (x,y,z) in line]
 			
             if values.count(self.player) == 3 and values.count(0) == 1:
-                score += 10
+                score += 100
             elif values.count(self.player) == 2 and values.count(0) == 2:
-                score += 1
+                score += 10
 
             if values.count(enemy) == 3 and values.count(0) == 1:
-                score -= 10
+                score -= 100
             elif values.count(enemy) == 2 and values.count(0) == 2:
-                score -= 1
+                score -= 10
 
         return score
 
@@ -141,8 +142,8 @@ class MyAI():
                 print("Row i :", row_i)
                 for space_i in range(4):
                     if board[plane_i][row_i][space_i] == 0 \
-                        and (3 == plane_i \
-                        or board[plane_i + 1][row_i][space_i] == 0 ):
+                        and (plane_i == 0 \
+                        or board[plane_i - 1][row_i][space_i] > 0 ):
 
                         action_arr.append((plane_i, row_i, space_i))
         return action_arr
@@ -159,7 +160,7 @@ class MyAI():
         if isMaximiser:
             max_eval = -math.inf
             for action in self.legal_move(board):
-                new_board = self.result(board, action, current_player)
+                new_board = self.result(board, action)
                 eval = self.alpha_beta_minimax(new_board, False, depth + 1, max_depth, alpha, beta)
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, eval)
@@ -169,7 +170,7 @@ class MyAI():
         else:
             min_eval = math.inf
             for action in self.legal_move(board):
-                new_board = self.result(board, action, current_player)
+                new_board = self.result(board, action)
                 eval = self.alpha_beta_minimax(new_board, True, depth + 1, max_depth, alpha, beta)
                 min_eval = min(min_eval, eval)
                 beta = min(beta, eval)
