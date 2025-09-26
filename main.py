@@ -76,7 +76,7 @@ class MyAI(Alg3D):
     AIの初期化 - 各種データ構造とハッシュテーブルの準備
     """
     def __init__(self):
-        self.max_depth = 8 # 探索深度
+        self.max_depth = 6 # 探索深度
         self.player_num = None  # 自分のプレイヤー番号
         
         # 勝利パターンを事前計算（ビットマスク）
