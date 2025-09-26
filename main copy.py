@@ -20,31 +20,12 @@ class MyAI():
     ) -> Tuple[int, int]:
         # ここにアルゴリズムを書く
         self.player = player
-        legal_moves = self.legal_move(board)
-        
-        # デバッグ: 座標系の確認
-        # print(f"Player {player}, Legal moves: {legal_moves[:3]}")  # 最初の3つだけ表示
-        
-        # 有効な手がない場合のエラーハンドリング
-        if not legal_moves:
-            # 緊急時：重力ルールに従って最初の有効な場所を探す
-            for x in range(4):
-                for y in range(4):
-                    for z in range(4):
-                        if board[x][y][z] == 0 and (x == 0 or board[x-1][y][z] > 0):
-                            return (y, z)
-            # 最終手段：最下層の空いている場所
-            for y in range(4):
-                for z in range(4):
-                    if board[0][y][z] == 0:
-                        return (y, z)
-            return (0, 0)  # 最終手段
-        
         # HERE OPTIMISE
-        best_score = -math.inf
-        best_move = (legal_moves[0][1], legal_moves[0][2])  # 最初の有効手で初期化
-        
-        for action in legal_moves:
+        best_score = 0
+        best_move = (0, 0)
+        # print("Legal moves :", self.legal_move(board))
+        for action in self.legal_move(board):
+            # print("Action :", action)
             # if winning move, play it
             new_board = self.result(board, action)
             if self.is_terminal(new_board) and self.end_value == 1:
@@ -53,7 +34,7 @@ class MyAI():
             if current > best_score:
                 best_score = current
                 best_move = (action[1], action[2])
-        
+        # print("Best move :", best_move)
         return best_move
 
     def result(self, board, action):
@@ -156,9 +137,9 @@ class MyAI():
         action_arr = []
 
         for plane_i in range(4):
-            # print("Plane i :", plane_i)  # フレームワークの出力を汚染するためコメントアウト
+            print("Plane i :", plane_i)
             for row_i in range(4):
-                # print("Row i :", row_i)  # フレームワークの出力を汚染するためコメントアウト
+                print("Row i :", row_i)
                 for space_i in range(4):
                     if board[plane_i][row_i][space_i] == 0 \
                         and (plane_i == 0 \
@@ -176,15 +157,9 @@ class MyAI():
         if self.is_terminal(board) or depth == max_depth:
             return self.evaluate(board)
 
-        legal_moves = self.legal_move(board)
-        
-        # 有効な手がない場合（ゲーム終了と見なす）
-        if not legal_moves:
-            return self.evaluate(board)
-
         if isMaximiser:
             max_eval = -math.inf
-            for action in legal_moves:
+            for action in self.legal_move(board):
                 new_board = self.result(board, action)
                 eval = self.alpha_beta_minimax(new_board, False, depth + 1, max_depth, alpha, beta)
                 max_eval = max(max_eval, eval)
@@ -194,7 +169,7 @@ class MyAI():
             return max_eval
         else:
             min_eval = math.inf
-            for action in legal_moves:
+            for action in self.legal_move(board):
                 new_board = self.result(board, action)
                 eval = self.alpha_beta_minimax(new_board, True, depth + 1, max_depth, alpha, beta)
                 min_eval = min(min_eval, eval)
